@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <!-- توافق العرض مع الموبايل -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>تخطيط المهام</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- ملف manifest للتثبيت -->
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* تنسيق الحالة */
+    .status-red { background-color: #ffcccc; }
+    .status-yellow { background-color: #ffffcc; }
+    .status-green { background-color: #ccffcc; }
+    .task-card { transition: all 0.3s; }
+    .task-card:hover { transform: scale(1.02); }
+    /* إزالة سهم datalist */
+    input[list] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+    /* تنسيق المهمة المكتملة (للمهام المتكررة) */
+    .completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+    /* تنسيق رؤوس الأقسام بدون خطوط */
+    .section-header {
+      text-align: center;
+      margin: 30px 0 20px;
+      font-weight: bold;
+    }
+    /* محتوى الأقسام بدون حدود حول العناوين */
+    .content-section {
+      padding: 20px;
+      margin-bottom: 30px;
+      background-color: #fff;
+      border-radius: 8px;
+    }
+    /* استعلام وسائط لتعديل حجم الخطوط على الموبايل */
+    @media (max-width: 576px) {
+      body { font-size: 14px; }
+      .display-4 { font-size: 2.5rem; }
+      .section-header { font-size: 1.5rem; }
+      .card-title { font-size: 1.25rem; }
+      .lead { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <!-- رأس الصفحة -->
+    <header class="mb-4 text-center">
+      <h1 class="display-4 text-primary">تخطيط المهام 📚</h1>
+      <p class="lead text-muted">نظم وقتك وحقق أهدافك مع نظام إدارة المهام الذكي!</p>
+    </header>
+
+    <!-- لوحة التحكم مع ملخص اليوم -->
+    <section class="dashboard content-section">
+      <h2 class="section-header">لوحة التحكم</h2>
+      <div id="dashboardSummary" class="card shadow-sm">
+        <!-- سيتم تحديث المحتوى ديناميكيًا -->
+      </div>
+    </section>
+
+    <!-- إضافة مهمة جديدة -->
+    <section class="add-task content-section">
+      <h2 class="section-header">إضافة مهمة جديدة</h2>
+      <form id="taskForm" class="row g-3">
+        <div class="col-md-6">
+          <label for="taskName" class="form-label">اسم المهمة</label>
+          <input type="text" class="form-control" id="taskName" placeholder="أدخل اسم المهمة" required>
+        </div>
+        <div class="col-md-6">
+          <label for="taskCategory" class="form-label">التصنيف</label>
+          <input list="categories" class="form-control" id="taskCategory" placeholder="أدخل التصنيف" required>
+          <datalist id="categories">
+            <option value="دراسي">
+            <option value="شخصي">
+            <option value="عمل تطوعي">
+            <option value="رياضي">
+            <option value="اجتماعي">
+          </datalist>
+        </div>
+        <div class="col-md-12">
+          <label for="taskDetails" class="form-label">التفاصيل</label>
+          <textarea class="form-control" id="taskDetails" placeholder="أدخل تفاصيل المهمة" rows="2"></textarea>
+        </div>
+        <!-- اختيار المهمة المتكررة -->
+        <div class="col-md-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="taskRecurring">
+            <label class="form-check-label" for="taskRecurring">مهمة متكررة يوميًا</label>
+          </div>
+        </div>
+        <!-- الحقول الخاصة بالمهام غير المتكررة -->
+        <div id="nonRecurringFields" class="row g-3 nonRecurringFields">
+          <div class="col-md-4">
+            <label for="startDate" class="form-label">موعد البدء</label>
+            <input type="datetime-local" class="form-control" id="startDate">
+          </div>
+          <div class="col-md-4">
+            <label for="endDate" class="form-label">موعد الانتهاء</label>
+            <input type="datetime-local" class="form-control" id="endDate">
+          </div>
+          <div class="col-md-4">
+            <label for="deadline" class="form-label">موعد التسليم</label>
+            <input type="datetime-local" class="form-control" id="deadline">
+          </div>
+          <!-- خانة اختيار الحالة تظهر أسفل التواريخ -->
+          <div class="col-md-12">
+            <label for="taskStatus" class="form-label">الحالة</label>
+            <select class="form-select" id="taskStatus">
+              <option class="status-red" value="لم يتم البدء">لم يتم البدء</option>
+              <option class="status-yellow" value="جاري التنفيذ">جاري التنفيذ</option>
+              <option class="status-green" value="تم الانتهاء">تم الانتهاء</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary" id="submitBtn">إضافة المهمة</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none;">إلغاء التعديل</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- قائمة المهام -->
+    <section class="task-list content-section">
+      <h2 class="section-header">قائمة المهام</h2>
+      <div class="mb-3">
+        <input type="text" id="taskSearch" class="form-control" placeholder="ابحث عن مهمة...">
+      </div>
+      <!-- ترتيب التحكم: أولاً اختيار الحالة ثم ترتيب حسب -->
+      <div class="mb-3">
+        <select id="filterStatus" class="form-select">
+          <option value="">جميع الحالات</option>
+          <option value="لم يتم البدء">لم يتم البدء</option>
+          <option value="جاري التنفيذ">جاري التنفيذ</option>
+          <option value="تم الانتهاء">تم الانتهاء</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <select id="sortBy" class="form-select">
+          <option value="startDate">ترتيب حسب موعد البدء</option>
+          <option value="endDate">ترتيب حسب موعد الانتهاء</option>
+          <option value="deadline">ترتيب حسب موعد التسليم</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <button id="clearTasksBtn" class="btn btn-danger btn-sm">مسح جميع المهام</button>
+      </div>
+      <div id="allTasks"></div>
+    </section>
+  </div>
+
+  <!-- تسجيل Service Worker لتفعيل الأوفلاين والتثبيت -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(registration => console.log('Service Worker registered:', registration))
+        .catch(error => console.log('Service Worker registration failed:', error));
+    }
+  </script>
+
+  <!-- كود التطبيق -->
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let editIndex = -1; // مؤشر المهمة التي يتم تعديلها
+
+    // إعادة تعيين حالة المهام المتكررة يوميًا
+    function resetRecurringTasks() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const lastReset = localStorage.getItem('lastResetDate');
+      if (lastReset !== todayStr) {
+        tasks.forEach(task => {
+          if (task.recurring) {
+            task.completed = false;
+          }
+        });
+        localStorage.setItem('lastResetDate', todayStr);
+        saveTasks();
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    // عرض لوحة التحكم مع دمج ملخص اليوم والمهام
+    function renderDashboard() {
+      resetRecurringTasks();
+      const today = new Date();
+
+      // استخدام tasks مباشرة مع map للحصول على الفهرس الحقيقي لكل مهمة متكررة
+      const recurringHTML = tasks.reduce((html, task, index) => {
+        if (task.recurring) {
+          return html + `
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="recurringTask${index}" onchange="toggleRecurring(${index})" ${task.completed ? 'checked' : ''}>
+              <label class="form-check-label ${task.completed ? 'completed' : ''}" for="recurringTask${index}">
+                <strong>${task.name}</strong> - ${task.category}<br>
+                <small>${task.details || ''}</small>
+              </label>
+            </div>
+          `;
+        }
+        return html;
+      }, "");
+
+      // المهام غير المتكررة ضمن فترة اليوم
+      const nonRecurringTasks = tasks.filter(task =>
+        !task.recurring &&
+        new Date(task.startDate) <= today &&
+        new Date(task.deadline) >= today
+      );
+      const nonRecurringHTML = nonRecurringTasks.map(task => `
+        <div class="task-card alert ${getStatusClass(task.status)} mb-2">
+          <strong>${task.name}</strong> - ${task.category}<br>
+          <small>${task.details || ''}</small>
+        </div>
+      `).join("");
+
+      document.getElementById('dashboardSummary').innerHTML = `
+        <div class="card-body">
+          <h5 class="card-title">ملخص اليوم</h5>
+          <p id="summaryText" class="mb-3">
+            المهام المتكررة: ${tasks.filter(t => t.recurring).length} | مهام اليوم: ${nonRecurringTasks.length}
+          </p>
+          <h6>المهام المتكررة</h6>
+          <div id="recurringTasksList">${recurringHTML}</div>
+          <h6 class="mt-3">مهام اليوم</h6>
+          <div id="nonRecurringDashboardTasks">${nonRecurringHTML}</div>
+        </div>
+      `;
+    }
+
+    // عرض قائمة المهام (غير المتكررة) مع البحث والفرز والتصفية
+    function renderTaskList() {
+      const searchTerm = document.getElementById('taskSearch').value.toLowerCase();
+      let filteredTasks = tasks.filter(task =>
+        !task.recurring && (
+          task.name.toLowerCase().includes(searchTerm) ||
+          task.category.toLowerCase().includes(searchTerm) ||
+          (task.details && task.details.toLowerCase().includes(searchTerm))
+        )
+      );
+      const statusFilter = document.getElementById('filterStatus').value;
+      if (statusFilter) {
+        filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
+      }
+      const sortBy = document.getElementById('sortBy').value;
+      filteredTasks.sort((a, b) => new Date(a[sortBy]) - new Date(b[sortBy]));
+      document.getElementById('allTasks').innerHTML = filteredTasks.map((task, index) => `
+        <div class="card task-card shadow-sm mb-3">
+          <div class="card-body ${getStatusClass(task.status)}">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h5>${task.name}</h5>
+                <p>التصنيف: ${task.category}</p>
+                <p>البدء: ${formatDate(task.startDate)}</p>
+                <p>الانتهاء: ${formatDate(task.endDate)}</p>
+                <p>التسليم: ${formatDate(task.deadline)}</p>
+                <p>التفاصيل: ${task.details || '—'}</p>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <select class="form-select" onchange="updateStatus(${tasks.indexOf(task)}, this.value)">
+                  <option class="status-red" value="لم يتم البدء" ${task.status === 'لم يتم البدء' ? 'selected' : ''}>لم يتم البدء</option>
+                  <option class="status-yellow" value="جاري التنفيذ" ${task.status === 'جاري التنفيذ' ? 'selected' : ''}>جاري التنفيذ</option>
+                  <option class="status-green" value="تم الانتهاء" ${task.status === 'تم الانتهاء' ? 'selected' : ''}>تم الانتهاء</option>
+                </select>
+                <div class="d-flex gap-2">
+                  <button onclick="editTask(${tasks.indexOf(task)})" class="btn btn-warning btn-sm">تعديل</button>
+                  <button onclick="deleteTask(${tasks.indexOf(task)})" class="btn btn-danger btn-sm">حذف</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderTasks() {
+      renderDashboard();
+      renderTaskList();
+    }
+
+    function updateStatus(index, newStatus) {
+      tasks[index].status = newStatus;
+      saveTasks();
+      renderTasks();
+    }
+
+    function getStatusClass(status) {
+      return {
+        'لم يتم البدء': 'status-red',
+        'جاري التنفيذ': 'status-yellow',
+        'تم الانتهاء': 'status-green'
+      }[status];
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '—';
+      const options = { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return new Date(dateString).toLocaleString('ar-EG', options);
+    }
+
+    function deleteTask(index) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    }
+
+    function editTask(index) {
+      const task = tasks[index];
+      document.getElementById('taskName').value = task.name;
+      document.getElementById('taskCategory').value = task.category;
+      document.getElementById('taskDetails').value = task.details || '';
+      document.getElementById('taskRecurring').checked = task.recurring || false;
+      if (task.recurring) {
+        document.getElementById('nonRecurringFields').style.display = 'none';
+      } else {
+        document.getElementById('nonRecurringFields').style.display = 'flex';
+        document.getElementById('startDate').value = task.startDate;
+        document.getElementById('endDate').value = task.endDate;
+        document.getElementById('deadline').value = task.deadline;
+        document.getElementById('taskStatus').value = task.status;
+      }
+      editIndex = index;
+      document.getElementById('submitBtn').textContent = 'تحديث المهمة';
+      document.getElementById('formTitle').textContent = 'تحديث المهمة';
+      document.getElementById('cancelEditBtn').style.display = 'inline-block';
+    }
+
+    // عند النقر على تشيك بوكس المهمة المتكررة يتم تغيير حالتها وتطبيق تأثير الشخبطة
+    function toggleRecurring(index) {
+      tasks[index].completed = !tasks[index].completed;
+      saveTasks();
+      renderTasks();
+    }
+
+    // تغيير ظهور الحقول الخاصة بالمهام غير المتكررة عند تحديد خيار المهمة المتكررة
+    document.getElementById('taskRecurring').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('nonRecurringFields').style.display = 'none';
+      } else {
+        document.getElementById('nonRecurringFields').style.display = 'flex';
+      }
+    });
+
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+      editIndex = -1;
+      document.getElementById('taskForm').reset();
+      document.getElementById('submitBtn').textContent = 'إضافة المهمة';
+      document.getElementById('formTitle').textContent = 'إضافة مهمة جديدة';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+      document.getElementById('nonRecurringFields').style.display = 'flex';
+    });
+
+    document.getElementById('taskForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const recurring = document.getElementById('taskRecurring').checked;
+      let newTask;
+      if (recurring) {
+        newTask = {
+          name: document.getElementById('taskName').value,
+          category: document.getElementById('taskCategory').value,
+          details: document.getElementById('taskDetails').value,
+          recurring: true,
+          completed: false
+        };
+      } else {
+        newTask = {
+          name: document.getElementById('taskName').value,
+          category: document.getElementById('taskCategory').value,
+          details: document.getElementById('taskDetails').value,
+          startDate: document.getElementById('startDate').value,
+          endDate: document.getElementById('endDate').value,
+          deadline: document.getElementById('deadline').value,
+          status: document.getElementById('taskStatus').value,
+          recurring: false
+        };
+      }
+      if (editIndex > -1) {
+        tasks[editIndex] = newTask;
+        editIndex = -1;
+        document.getElementById('submitBtn').textContent = 'إضافة المهمة';
+        document.getElementById('formTitle').textContent = 'إضافة مهمة جديدة';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+      } else {
+        tasks.push(newTask);
+      }
+      saveTasks();
+      renderTasks();
+      e.target.reset();
+      document.getElementById('nonRecurringFields').style.display = 'flex';
+    });
+
+    document.getElementById('taskSearch').addEventListener('input', renderTaskList);
+    document.getElementById('filterStatus').addEventListener('change', renderTaskList);
+    document.getElementById('sortBy').addEventListener('change', renderTaskList);
+    document.getElementById('clearTasksBtn').addEventListener('click', () => {
+      if (confirm('هل أنت متأكد من مسح جميع المهام؟')) {
+        tasks = [];
+        saveTasks();
+        renderTasks();
+      }
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
